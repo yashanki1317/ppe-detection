@@ -1,0 +1,11 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.streamlit/secrets.toml
+train/
+valid/
+test/
+PPE-Detection-with-Gloves-9/
+best.pt
