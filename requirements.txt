@@ -1,4 +1,1 @@
-streamlit
-ultralytics
-pandas
-Pillow
+streamlit\nultralytics\npandas\nPillow\nmatplotlib\n

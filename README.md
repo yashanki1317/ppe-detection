@@ -1,67 +1,101 @@
-# PPE Detection
+# PPE Detection using YOLOv8
 
-A clean, responsive Streamlit application that uses a custom-trained YOLOv8n model to detect **Gloves, Vest, helmet, and person** in uploaded images.
+A computer-vision project that detects four classes in images: **Gloves, Vest, helmet, and person**. This repository includes the Streamlit inference app, training and evaluation scripts, and an exploratory data analysis (EDA).
 
 ## Features
-- Simple light interface with mobile-friendly layout
-- JPG, JPEG, and PNG image upload
-- Adjustable confidence threshold
-- Annotated image with bounding boxes and labels
-- Detection table with class and confidence
-- Download detections as CSV or annotated PNG
+- Upload an image and run PPE object detection in Streamlit.
+- Display bounding boxes, predicted classes, and confidence scores.
+- Review detections and export results where supported by the app.
+- Train a YOLOv8n baseline and evaluate it on a selected dataset split.
 
-## Model evaluation
-Trained for 25 epochs on a Tesla T4 GPU. Held-out test set: 44 images and 270 labelled objects.
+## Dataset
+- **Dataset:** [PPE-Detection-with-Gloves, version 9 (Roboflow)](https://universe.roboflow.com/ppe-detection-82plm/ppe-detection-with-gloves)
+- **Format:** YOLOv8
+- **Classes:** Gloves, Vest, helmet, person
+- **Images:** 501 train, 119 validation, 44 test (664 total)
 
-| Metric | Test score |
+Download/export the dataset from Roboflow in YOLOv8 format and extract it locally. The dataset is intentionally not stored in this repository.
+
+Expected layout:
+```text
+PPE-Detection-with-Gloves-9/
+├── data.yaml
+├── train/images/  train/labels/
+├── valid/images/  valid/labels/
+└── test/images/   test/labels/
+```
+Check that the paths inside `data.yaml` point to the extracted folders.
+
+## Exploratory Data Analysis (EDA)
+Training-set labeled object counts:
+
+| Class | Labeled objects |
+|---|---:|
+| Gloves | 830 |
+| Vest | 821 |
+| helmet | 947 |
+| person | 999 |
+| **Total** | **3,597** |
+
+![Training-set class distribution](screenshots/class-distribution.png)
+
+The class counts are reasonably close, so a large class-count imbalance is not an obvious explanation for weaker glove detection. Object size, visibility, occlusion, and image variety may also affect performance; the counts alone cannot establish the cause.
+
+## Install dependencies
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## Train the model
+The baseline used YOLOv8n for 25 epochs at image size 640. `train.py` defaults to batch size 16; lower it if your hardware runs out of memory.
+
+```bash
+python train.py --data /path/to/PPE-Detection-with-Gloves-9/data.yaml
+```
+Replace the example path with the actual location of your dataset's `data.yaml`. The best weights are normally saved at `runs/ppe_baseline/train/weights/best.pt`.
+
+## Evaluate the model
+```bash
+python evaluate.py --weights runs/ppe_baseline/train/weights/best.pt --data /path/to/PPE-Detection-with-Gloves-9/data.yaml --split test
+```
+The script prints precision, recall, mAP@50, mAP@50–95, and per-class AP@50.
+
+### Previously recorded baseline metrics
+| Metric | Test result |
 |---|---:|
 | Precision | 76.6% |
 | Recall | 76.7% |
 | mAP@50 | 80.0% |
 | mAP@50–95 | 46.8% |
 
-Per-class mAP@50: Gloves 54.3%, Vest 82.0%, helmet 93.7%, person 89.9%.
+Recorded validation metrics were precision 87.6%, recall 79.5%, mAP@50 85.0%, and mAP@50–95 57.4%. Re-running training can produce slightly different results.
 
-**Limitation:** glove detection is weaker than the other classes. This is a baseline prototype, not a certified safety system; verify safety decisions with a qualified person.
+Recorded test mAP@50 by class: Gloves 54.3%, Vest 82.0%, helmet 93.7%, person 89.9%. Gloves were the weakest class in that run.
 
-## Files
+## Run the Streamlit app
+Place your trained `best.pt` beside `app.py` if the app expects that filename, then run:
+```bash
+streamlit run app.py
+```
+The dataset and model weights are not committed to GitHub; download the dataset separately and supply the trained weights locally.
+
+## Repository contents
 ```text
-ppe-detection-app/
+ppe-detection/
 ├── app.py
-├── best.pt
+├── train.py
+├── evaluate.py
 ├── requirements.txt
 ├── README.md
-└── .gitignore
-```
-Place your trained `best.pt` in the same folder as `app.py`. The model file is not included in this package.
-
-## Run locally
-Python 3.10–3.12 is recommended for dependency compatibility.
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m streamlit run app.py
+└── screenshots/
+    ├── app-home.png
+    ├── ppe-detection-results.png
+    ├── detection-details.png
+    └── class-distribution.png
 ```
 
-Open http://localhost:8501.
-
-## Deploy
-Push the files to GitHub, then use Streamlit Community Cloud to create an app from your repository with main file `app.py`. Test the deployed URL after the build completes.
-
-Dataset: Roboflow Universe `ppe-detection-with-gloves`, version 9 (dataset page lists CC BY 4.0). Preserve attribution and check license terms before redistributing dataset material.
-
-## Application Screenshots
-
-### 1. Application Interface
-
-![PPE Detection application interface](screenshots/app-home.png)
-
-### 2. PPE Detection Results
-
-![PPE detection results](screenshots/ppe-detection-results.png)
-
-### 3. Detection Details
-
-![Detection details](screenshots/detection-details.png)
+## Limitations and next steps
+Glove detection was weaker than the other classes in the recorded test results. Investigate object size, occlusion, image quality, and class-specific examples before attributing the gap to one cause. The model detects the trained visual classes; it does not independently determine full workplace PPE compliance.
